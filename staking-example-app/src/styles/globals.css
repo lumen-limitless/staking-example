@@ -1,0 +1,59 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-text: -apple-system, system-ui, BlinkMacSystemFont, 'Helvetica Neue',
+    'Helvetica', sans-serif;
+  --font-heading: -apple-system, system-ui, BlinkMacSystemFont, 'Helvetica Neue',
+    'Helvetica', sans-serif;
+}
+
+*,
+*:before,
+*:after {
+  box-sizing: inherit;
+}
+
+html,
+body {
+  font-family: var(--font-text);
+  @apply box-border touch-manipulation scroll-smooth bg-black text-white antialiased;
+}
+
+#__next {
+  @apply flex min-h-screen flex-col;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-heading);
+}
+
+/* width */
+::-webkit-scrollbar {
+  width: 14px;
+  height: 16px;
+}
+
+/* Track */
+::-webkit-scrollbar-track {
+  border-radius: 100vh;
+  background: #04031b;
+}
+
+/* Handle */
+::-webkit-scrollbar-thumb {
+  background: hsl(243, 5%, 26%);
+  border-radius: 100vh;
+  border: 2px solid hsl(240, 100%, 10%);
+}
+
+/* Handle on hover */
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(243, 5%, 33%);
+}
