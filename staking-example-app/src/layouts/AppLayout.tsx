@@ -55,8 +55,9 @@ export default function AppLayout({ children }: { children?: any }) {
         </p>
         <div className="ml-auto flex gap-3 px-3">
           <a
-            href="https://github.com/lumen-limitless/staking-example-app"
+            href="https://github.com/lumen-limitless/staking-example"
             title="View Github repo"
+            aria-label="Github Repository"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
