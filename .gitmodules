@@ -1,0 +1,3 @@
+[submodule "lib/foundry-template"]
+	path = lib/foundry-template
+	url = https://github.com/lumen-limitless/foundry-template
