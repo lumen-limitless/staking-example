@@ -1,0 +1,8 @@
+@clones/=lib/playpen/lib/clones-with-immutable-args/src/
+clones-with-immutable-args/=lib/playpen/lib/clones-with-immutable-args/src/
+create3-factory/=lib/create3-factory/src/
+ds-test/=lib/playpen/lib/ds-test/src/
+forge-std/=lib/forge-std/src/
+playpen/=lib/playpen/src/
+solmate/=lib/solmate/src/
+weird-erc20/=lib/playpen/lib/solmate/lib/weird-erc20/src/

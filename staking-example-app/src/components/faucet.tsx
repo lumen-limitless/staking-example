@@ -2,7 +2,8 @@ import { BigNumber } from 'ethers'
 import { useNetwork, usePrepareContractWrite } from 'wagmi'
 import TransactionButton from './WagmiTransactionButton'
 import Button from './ui/Button'
-import { STEAK_TOKEN_ABI, STEAK_TOKEN_ADDRESS } from '../constants'
+import { STEAK_TOKEN_ADDRESS } from '../constants'
+import STEAK_TOKEN_ABI from '../constants/SteakToken.abi'
 
 export default function Faucet({
   lastFaucetMint,
@@ -11,7 +12,7 @@ export default function Faucet({
 }) {
   const { chain } = useNetwork()
   const faucetMintConfig = usePrepareContractWrite({
-    address: STEAK_TOKEN_ADDRESS[chain?.id ?? 0],
+    address: STEAK_TOKEN_ADDRESS,
     abi: STEAK_TOKEN_ABI,
     functionName: 'faucetMint',
   })

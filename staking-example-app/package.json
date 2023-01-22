@@ -16,7 +16,6 @@
   "dependencies": {
     "@headlessui/react": "^1.7.7",
     "@tanstack/query-core": "^4.22.0",
-    "@usedapp/core": "^1.2.2",
     "@web3-react/walletconnect-connector": "^6.2.13",
     "clsx": "^1.2.1",
     "connectkit": "^1.1.1",
@@ -30,7 +29,7 @@
     "react-dom": "^18.2.0",
     "react-is": "^18.2.0",
     "react-use": "^17.4.0",
-    "wagmi": "^0.10.11",
+    "wagmi": "^0.10.12",
     "zustand": "^4.3.2"
   },
   "devDependencies": {

@@ -15,9 +15,7 @@ import { useStakingCalls } from '../hooks'
 import Spinner from '../components/ui/Spinner'
 import {
   DEFAULT_CHAIN_ID,
-  STAKING_REWARDS_ABI,
   STAKING_REWARDS_ADDRESS,
-  STEAK_TOKEN_ABI,
   STEAK_TOKEN_ADDRESS,
 } from '../constants'
 import { NextSeo } from 'next-seo'
@@ -27,10 +25,12 @@ import {
   useAccount,
   useBalance,
   useContractRead,
-  useNetwork,
   usePrepareContractWrite,
   useSignTypedData,
 } from 'wagmi'
+import STEAK_TOKEN_ABI from '../constants/SteakToken.abi'
+import ERC20_STAKING_POOL_ABI from '../constants/ERC20StakingPool.abi'
+import useStakeCalldata from '../hooks/useStakeCalldata'
 
 const StakePage: NextPage = () => {
   const [amount, setAmount] = useState<string>('')
@@ -38,16 +38,14 @@ const StakePage: NextPage = () => {
 
   const { address, isConnected, isDisconnected } = useAccount()
 
-  const { chain } = useNetwork()
-
   const tokenBalance = useBalance({
     address: address,
-    token: STEAK_TOKEN_ADDRESS[chain?.id ?? DEFAULT_CHAIN_ID],
+    token: STEAK_TOKEN_ADDRESS,
     watch: true,
   })
 
   const nonces = useContractRead({
-    address: STEAK_TOKEN_ADDRESS[chain?.id ?? DEFAULT_CHAIN_ID],
+    address: STEAK_TOKEN_ADDRESS,
     abi: STEAK_TOKEN_ABI,
     functionName: 'nonces',
     args: [address || '0x'],
@@ -59,7 +57,6 @@ const StakePage: NextPage = () => {
 
   const apr = useMemo(() => {
     if (!stakingData) return null
-
     const r = parseBalance(stakingData.rewardRate) as number
     const t = parseBalance(stakingData.totalSupply) as number
     const apr = ((r * 31557600) / t) * 100
@@ -76,7 +73,7 @@ const StakePage: NextPage = () => {
     reset()
   }
 
-  const deadline = useRef(BigNumber.from(Math.floor(Date.now() / 1000 + 1600)))
+  const deadline = useRef(BigNumber.from(Math.floor(Date.now() / 1000 + 3600)))
 
   const {
     data: signature,
@@ -85,10 +82,10 @@ const StakePage: NextPage = () => {
     reset,
   } = useSignTypedData({
     domain: {
-      verifyingContract: STEAK_TOKEN_ADDRESS[chain?.id ?? 0],
+      verifyingContract: STEAK_TOKEN_ADDRESS,
       version: '1',
-      chainId: chain?.id,
-      name: 'Steak Token',
+      chainId: DEFAULT_CHAIN_ID,
+      name: 'SteakToken',
     },
     types: {
       Permit: [
@@ -101,9 +98,9 @@ const StakePage: NextPage = () => {
     },
     value: {
       owner: address as `0x${string}`,
-      spender: STAKING_REWARDS_ADDRESS[chain?.id ?? 0],
-      value: parseUnits(amount || '0'),
-      nonce: BigNumber.from(nonces.data || 0),
+      spender: STAKING_REWARDS_ADDRESS,
+      value: parseUnits(amount || '1'),
+      nonce: nonces?.data || ethers.constants.One,
       deadline: deadline.current,
     },
   })
@@ -113,38 +110,53 @@ const StakePage: NextPage = () => {
     return ethers.utils.splitSignature(signature)
   }, [signature])
 
-  const stakeWithPermitConfig = usePrepareContractWrite({
-    address: STAKING_REWARDS_ADDRESS[chain?.id ?? 0],
-    abi: STAKING_REWARDS_ABI,
-    functionName: 'stakeWithPermit',
+  const selfPermitConfig = usePrepareContractWrite({
+    address: STAKING_REWARDS_ADDRESS,
+    abi: ERC20_STAKING_POOL_ABI,
+    functionName: 'selfPermit',
     args: [
+      STEAK_TOKEN_ADDRESS,
       parseUnits(amount || '0'),
       deadline.current,
       permit?.v as number,
       permit?.r as `0x${string}`,
       permit?.s as `0x${string}`,
     ],
-    enabled: Boolean(permit) && !isWithdrawing,
+    enabled: Boolean(amount !== ''),
+  })
+  const stakeCalldata = useStakeCalldata(amount)
+
+  const multicallConfig = usePrepareContractWrite({
+    address: STAKING_REWARDS_ADDRESS,
+    abi: ERC20_STAKING_POOL_ABI,
+    functionName: 'multicall',
+    args: [
+      [
+        selfPermitConfig?.data?.request.data as `0x${string}`,
+        stakeCalldata as `0x${string}`,
+      ],
+    ],
+    enabled: Boolean(selfPermitConfig?.data && stakeCalldata),
   })
 
   const exitConfig = usePrepareContractWrite({
-    address: STAKING_REWARDS_ADDRESS[chain?.id ?? 0],
-    abi: STAKING_REWARDS_ABI,
+    address: STAKING_REWARDS_ADDRESS,
+    abi: ERC20_STAKING_POOL_ABI,
     functionName: 'exit',
     enabled: stakingData?.balanceOf?.gt(0),
   })
 
   const withdrawConfig = usePrepareContractWrite({
-    address: STAKING_REWARDS_ADDRESS[chain?.id ?? 0],
-    abi: STAKING_REWARDS_ABI,
+    address: STAKING_REWARDS_ADDRESS,
+    abi: ERC20_STAKING_POOL_ABI,
     functionName: 'withdraw',
-    args: [parseUnits(amount || '1')],
-    enabled: isWithdrawing,
+    args: [parseUnits(amount || '0')],
+    enabled: Boolean(amount !== '') && isWithdrawing,
   })
 
   const getRewardConfig = usePrepareContractWrite({
-    address: STAKING_REWARDS_ADDRESS[chain?.id ?? 0],
-    abi: STAKING_REWARDS_ABI,
+    address: STAKING_REWARDS_ADDRESS,
+    abi: ERC20_STAKING_POOL_ABI,
     functionName: 'getReward',
   })
 
@@ -233,8 +245,6 @@ const StakePage: NextPage = () => {
                   </div>
                 ) : !stakingData ? (
                   <Spinner />
-                ) : stakingData?.paused === true ? (
-                  <Spinner />
                 ) : (
                   <>
                     <div className="mr-3 flex flex-col items-center gap-3 md:mr-9 md:flex-row">
@@ -293,7 +303,7 @@ const StakePage: NextPage = () => {
                         ) : (
                           <WagmiTransactionButton
                             className="w-full rounded bg-blue-500 p-3"
-                            config={stakeWithPermitConfig?.config}
+                            config={multicallConfig?.config}
                             name={`Stake ${commify(amount)} Tokens`}
                             onTransactionSuccess={() => reset()}
                           />
