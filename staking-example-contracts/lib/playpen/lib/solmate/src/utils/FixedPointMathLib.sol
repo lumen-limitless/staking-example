@@ -2,71 +2,85 @@
 pragma solidity >=0.8.0;
 
 /// @notice Arithmetic library with operations for fixed-point numbers.
-/// @author Solmate (https://github.com/Rari-Capital/solmate/blob/main/src/utils/FixedPointMathLib.sol)
+/// @author Solmate (https://github.com/transmissions11/solmate/blob/main/src/utils/FixedPointMathLib.sol)
+/// @author Inspired by USM (https://github.com/usmfum/USM/blob/master/contracts/WadMath.sol)
 library FixedPointMathLib {
-    /*///////////////////////////////////////////////////////////////
-                            COMMON BASE UNITS
+    /*//////////////////////////////////////////////////////////////
+                    SIMPLIFIED FIXED POINT OPERATIONS
     //////////////////////////////////////////////////////////////*/
 
-    uint256 internal constant YAD = 1e8;
-    uint256 internal constant WAD = 1e18;
-    uint256 internal constant RAY = 1e27;
-    uint256 internal constant RAD = 1e45;
+    uint256 internal constant MAX_UINT256 = 2**256 - 1;
 
-    /*///////////////////////////////////////////////////////////////
-                         FIXED POINT OPERATIONS
+    uint256 internal constant WAD = 1e18; // The scalar of ETH and most ERC20s.
+
+    function mulWadDown(uint256 x, uint256 y) internal pure returns (uint256) {
+        return mulDivDown(x, y, WAD); // Equivalent to (x * y) / WAD rounded down.
+    }
+
+    function mulWadUp(uint256 x, uint256 y) internal pure returns (uint256) {
+        return mulDivUp(x, y, WAD); // Equivalent to (x * y) / WAD rounded up.
+    }
+
+    function divWadDown(uint256 x, uint256 y) internal pure returns (uint256) {
+        return mulDivDown(x, WAD, y); // Equivalent to (x * WAD) / y rounded down.
+    }
+
+    function divWadUp(uint256 x, uint256 y) internal pure returns (uint256) {
+        return mulDivUp(x, WAD, y); // Equivalent to (x * WAD) / y rounded up.
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                    LOW LEVEL FIXED POINT OPERATIONS
     //////////////////////////////////////////////////////////////*/
 
-    function fmul(
+    function mulDivDown(
         uint256 x,
         uint256 y,
-        uint256 baseUnit
+        uint256 denominator
     ) internal pure returns (uint256 z) {
+        /// @solidity memory-safe-assembly
         assembly {
-            // Store x * y in z for now.
-            z := mul(x, y)
-
-            // Equivalent to require(x == 0 || (x * y) / x == y)
-            if iszero(or(iszero(x), eq(div(z, x), y))) {
+            // Equivalent to require(denominator != 0 && (y == 0 || x <= type(uint256).max / y))
+            if iszero(mul(denominator, iszero(mul(y, gt(x, div(MAX_UINT256, y)))))) {
                 revert(0, 0)
             }
 
-            // If baseUnit is zero this will return zero instead of reverting.
-            z := div(z, baseUnit)
+            // Divide x * y by the denominator.
+            z := div(mul(x, y), denominator)
         }
     }
 
-    function fdiv(
+    function mulDivUp(
         uint256 x,
         uint256 y,
-        uint256 baseUnit
+        uint256 denominator
     ) internal pure returns (uint256 z) {
+        /// @solidity memory-safe-assembly
         assembly {
-            // Store x * baseUnit in z for now.
-            z := mul(x, baseUnit)
-
-            // Equivalent to require(y != 0 && (x == 0 || (x * baseUnit) / x == baseUnit))
-            if iszero(and(iszero(iszero(y)), or(iszero(x), eq(div(z, x), baseUnit)))) {
+            // Equivalent to require(denominator != 0 && (y == 0 || x <= type(uint256).max / y))
+            if iszero(mul(denominator, iszero(mul(y, gt(x, div(MAX_UINT256, y)))))) {
                 revert(0, 0)
             }
 
-            // We ensure y is not zero above, so there is never division by zero here.
-            z := div(z, y)
+            // If x * y modulo the denominator is strictly greater than 0,
+            // 1 is added to round up the division of x * y by the denominator.
+            z := add(gt(mod(mul(x, y), denominator), 0), div(mul(x, y), denominator))
         }
     }
 
-    function fpow(
+    function rpow(
         uint256 x,
         uint256 n,
-        uint256 baseUnit
+        uint256 scalar
     ) internal pure returns (uint256 z) {
+        /// @solidity memory-safe-assembly
         assembly {
             switch x
             case 0 {
                 switch n
                 case 0 {
                     // 0 ** 0 = 1
-                    z := baseUnit
+                    z := scalar
                 }
                 default {
                     // 0 ** n = 0
@@ -76,8 +90,8 @@ library FixedPointMathLib {
             default {
                 switch mod(n, 2)
                 case 0 {
-                    // If n is even, store baseUnit in z for now.
-                    z := baseUnit
+                    // If n is even, store scalar in z for now.
+                    z := scalar
                 }
                 default {
                     // If n is odd, store x in z for now.
@@ -85,7 +99,7 @@ library FixedPointMathLib {
                 }
 
                 // Shifting right by 1 is like dividing by 2.
-                let half := shr(1, baseUnit)
+                let half := shr(1, scalar)
 
                 for {
                     // Shift n right by 1 before looping to halve it.
@@ -112,7 +126,7 @@ library FixedPointMathLib {
                     }
 
                     // Set x to scaled xxRound.
-                    x := div(xxRound, baseUnit)
+                    x := div(xxRound, scalar)
 
                     // If n is even:
                     if mod(n, 2) {
@@ -136,56 +150,65 @@ library FixedPointMathLib {
                         }
 
                         // Return properly scaled zxRound.
-                        z := div(zxRound, baseUnit)
+                        z := div(zxRound, scalar)
                     }
                 }
             }
         }
     }
 
-    /*///////////////////////////////////////////////////////////////
+    /*//////////////////////////////////////////////////////////////
                         GENERAL NUMBER UTILITIES
     //////////////////////////////////////////////////////////////*/
 
     function sqrt(uint256 x) internal pure returns (uint256 z) {
+        /// @solidity memory-safe-assembly
         assembly {
-            // Start off with z at 1.
-            z := 1
+            let y := x // We start y at x, which will help us make our initial estimate.
 
-            // Used below to help find a nearby power of 2.
-            let y := x
+            z := 181 // The "correct" value is 1, but this saves a multiplication later.
 
-            // Find the lowest power of 2 that is at least sqrt(x).
-            if iszero(lt(y, 0x100000000000000000000000000000000)) {
-                y := shr(128, y) // Like dividing by 2 ** 128.
+            // This segment is to get a reasonable initial estimate for the Babylonian method. With a bad
+            // start, the correct # of bits increases ~linearly each iteration instead of ~quadratically.
+
+            // We check y >= 2^(k + 8) but shift right by k bits
+            // each branch to ensure that if x >= 256, then y >= 256.
+            if iszero(lt(y, 0x10000000000000000000000000000000000)) {
+                y := shr(128, y)
                 z := shl(64, z)
             }
-            if iszero(lt(y, 0x10000000000000000)) {
-                y := shr(64, y) // Like dividing by 2 ** 64.
+            if iszero(lt(y, 0x1000000000000000000)) {
+                y := shr(64, y)
                 z := shl(32, z)
             }
-            if iszero(lt(y, 0x100000000)) {
-                y := shr(32, y) // Like dividing by 2 ** 32.
+            if iszero(lt(y, 0x10000000000)) {
+                y := shr(32, y)
                 z := shl(16, z)
             }
-            if iszero(lt(y, 0x10000)) {
-                y := shr(16, y) // Like dividing by 2 ** 16.
+            if iszero(lt(y, 0x1000000)) {
+                y := shr(16, y)
                 z := shl(8, z)
             }
-            if iszero(lt(y, 0x100)) {
-                y := shr(8, y) // Like dividing by 2 ** 8.
-                z := shl(4, z)
-            }
-            if iszero(lt(y, 0x10)) {
-                y := shr(4, y) // Like dividing by 2 ** 4.
-                z := shl(2, z)
-            }
-            if iszero(lt(y, 0x8)) {
-                // Equivalent to 2 ** z.
-                z := shl(1, z)
-            }
 
-            // Shifting right by 1 is like dividing by 2.
+            // Goal was to get z*z*y within a small factor of x. More iterations could
+            // get y in a tighter range. Currently, we will have y in [256, 256*2^16).
+            // We ensured y >= 256 so that the relative difference between y and y+1 is small.
+            // That's not possible if x < 256 but we can just verify those cases exhaustively.
+
+            // Now, z*z*y <= x < z*z*(y+1), and y <= 2^(16+8), and either y >= 256, or x < 256.
+            // Correctness can be checked exhaustively for x < 256, so we assume y >= 256.
+            // Then z*sqrt(y) is within sqrt(257)/sqrt(256) of sqrt(x), or about 20bps.
+
+            // For s in the range [1/256, 256], the estimate f(s) = (181/1024) * (s+1) is in the range
+            // (1/2.84 * sqrt(s), 2.84 * sqrt(s)), with largest error when s = 1 and when s = 256 or 1/256.
+
+            // Since y is in [256, 256*2^16), let a = y/65536, so that a is in [1/256, 256). Then we can estimate
+            // sqrt(y) using sqrt(65536) * 181/1024 * (a + 1) = 181/4 * (y + 65536)/65536 = 181 * (y + 65536)/2^18.
+
+            // There is no overflow risk here since y < 2^136 after the first branch above.
+            z := shr(18, mul(z, add(y, 65536))) // A mul() is saved from starting z at 181.
+
+            // Given the worst case multiplicative error of 2.84 above, 7 iterations should be enough.
             z := shr(1, add(z, div(x, z)))
             z := shr(1, add(z, div(x, z)))
             z := shr(1, add(z, div(x, z)))
@@ -194,13 +217,39 @@ library FixedPointMathLib {
             z := shr(1, add(z, div(x, z)))
             z := shr(1, add(z, div(x, z)))
 
-            // Compute a rounded down version of z.
-            let zRoundDown := div(x, z)
+            // If x+1 is a perfect square, the Babylonian method cycles between
+            // floor(sqrt(x)) and ceil(sqrt(x)). This statement ensures we return floor.
+            // See: https://en.wikipedia.org/wiki/Integer_square_root#Using_only_integer_division
+            // Since the ceil is rare, we save gas on the assignment and repeat division in the rare case.
+            // If you don't care whether the floor or ceil square root is returned, you can remove this statement.
+            z := sub(z, lt(div(x, z), z))
+        }
+    }
 
-            // If zRoundDown is smaller, use it.
-            if lt(zRoundDown, z) {
-                z := zRoundDown
-            }
+    function unsafeMod(uint256 x, uint256 y) internal pure returns (uint256 z) {
+        /// @solidity memory-safe-assembly
+        assembly {
+            // Mod x by y. Note this will return
+            // 0 instead of reverting if y is zero.
+            z := mod(x, y)
+        }
+    }
+
+    function unsafeDiv(uint256 x, uint256 y) internal pure returns (uint256 r) {
+        /// @solidity memory-safe-assembly
+        assembly {
+            // Divide x by y. Note this will return
+            // 0 instead of reverting if y is zero.
+            r := div(x, y)
+        }
+    }
+
+    function unsafeDivUp(uint256 x, uint256 y) internal pure returns (uint256 z) {
+        /// @solidity memory-safe-assembly
+        assembly {
+            // Add 1 to x * y if x % y > 0. Note this will
+            // return 0 instead of reverting if y is zero.
+            z := add(gt(mod(x, y), 0), div(x, y))
         }
     }
 }

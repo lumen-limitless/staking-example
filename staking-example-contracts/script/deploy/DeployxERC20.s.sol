@@ -17,11 +17,11 @@ contract DeployxERC20 is CREATE3Script {
         StakingPoolFactory factory =
             StakingPoolFactory(create3.getDeployed(deployer, getCreate3ContractSalt("StakingPoolFactory")));
 
-        ERC20 stakingToken = ERC20(create3.getDeployed(deployer, getCreate3ContractSalt("SteakToken")));
+        ERC20 stakingToken = ERC20(create3.getDeployed(deployer, getCreate3ContractSalt("StakeToken")));
 
         vm.startBroadcast(deployerPrivateKey);
 
-        pool = factory.createXERC20("SteakPool", "xSTEAK", uint8(18), stakingToken, type(uint64).max - 1);
+        pool = factory.createXERC20("StakingPool", "xSTEAK", uint8(18), stakingToken, type(uint64).max - 1);
 
         vm.stopBroadcast();
     }

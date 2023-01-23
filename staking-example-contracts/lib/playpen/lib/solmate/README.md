@@ -6,19 +6,25 @@
 
 ```ml
 auth
+├─ Owned — "Simple single owner authorization"
 ├─ Auth — "Flexible and updatable auth pattern"
 ├─ authorities
 │  ├─ RolesAuthority — "Role based Authority that supports up to 256 roles"
 │  ├─ MultiRolesAuthority — "Flexible and target agnostic role based Authority"
+mixins
+├─ ERC4626 — "Minimal ERC4626 tokenized Vault implementation"
 tokens
 ├─ WETH — "Minimalist and modern Wrapped Ether implementation"
 ├─ ERC20 — "Modern and gas efficient ERC20 + EIP-2612 implementation"
 ├─ ERC721 — "Modern, minimalist, and gas efficient ERC721 implementation"
 ├─ ERC1155 — "Minimalist and gas efficient standard ERC1155 implementation"
 utils
-├─ SSTORE2 - "Library for cheaper reads and writes to persistent storage"
+├─ SSTORE2 — "Library for cheaper reads and writes to persistent storage"
 ├─ CREATE3 — "Deploy to deterministic addresses without an initcode factor"
-├─ SafeCastLib - "Safe unsigned integer casting lib that reverts on overflow"
+├─ LibString — "Library for creating string representations of uint values"
+├─ SafeCastLib — "Safe unsigned integer casting lib that reverts on overflow"
+├─ SignedWadMath — "Signed integer 18 decimal fixed point arithmetic library"
+├─ MerkleProofLib — "Efficient merkle tree inclusion proof verification library"
 ├─ ReentrancyGuard — "Gas optimized reentrancy protection for smart contracts"
 ├─ FixedPointMathLib — "Arithmetic library with operations for fixed-point numbers"
 ├─ Bytes32AddressLib — "Library for converting between addresses and bytes32 values"
@@ -27,7 +33,7 @@ utils
 
 ## Safety
 
-This is **experimental software** and is provided on an "as is" and "as available" basis. 
+This is **experimental software** and is provided on an "as is" and "as available" basis.
 
 While each [major release has been audited](audits), these contracts are **not designed with user safety** in mind:
 
@@ -39,22 +45,16 @@ We **do not give any warranties** and **will not be liable for any loss** incurr
 
 ## Installation
 
-To install with [**DappTools**](https://github.com/dapphub/dapptools):
-
-```sh
-dapp install rari-capital/solmate
-```
-
 To install with [**Foundry**](https://github.com/gakonst/foundry):
 
 ```sh
-forge install rari-capital/solmate
+forge install transmissions11/solmate
 ```
 
 To install with [**Hardhat**](https://github.com/nomiclabs/hardhat) or [**Truffle**](https://github.com/trufflesuite/truffle):
 
 ```sh
-npm install @rari-capital/solmate
+npm install solmate
 ```
 
 ## Acknowledgements

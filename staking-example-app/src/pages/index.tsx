@@ -15,8 +15,8 @@ import { useStakingCalls } from '../hooks'
 import Spinner from '../components/ui/Spinner'
 import {
   DEFAULT_CHAIN_ID,
-  STAKING_REWARDS_ADDRESS,
-  STEAK_TOKEN_ADDRESS,
+  ERC20_STAKING_POOL_PERPETUAL_ADDRESS,
+  STAKE_TOKEN_ADDRESS,
 } from '../constants'
 import { NextSeo } from 'next-seo'
 import Faucet from '../components/faucet'
@@ -28,8 +28,8 @@ import {
   usePrepareContractWrite,
   useSignTypedData,
 } from 'wagmi'
-import STEAK_TOKEN_ABI from '../constants/SteakToken.abi'
-import ERC20_STAKING_POOL_ABI from '../constants/ERC20StakingPool.abi'
+import STEAK_TOKEN_ABI from '../constants/StakeToken.abi'
+import ERC20_STAKING_POOL_ABI from '../constants/ERC20StakingPoolPerpetual.abi'
 import useStakeCalldata from '../hooks/useStakeCalldata'
 
 const StakePage: NextPage = () => {
@@ -40,12 +40,12 @@ const StakePage: NextPage = () => {
 
   const tokenBalance = useBalance({
     address: address,
-    token: STEAK_TOKEN_ADDRESS,
+    token: STAKE_TOKEN_ADDRESS,
     watch: true,
   })
 
   const nonces = useContractRead({
-    address: STEAK_TOKEN_ADDRESS,
+    address: STAKE_TOKEN_ADDRESS,
     abi: STEAK_TOKEN_ABI,
     functionName: 'nonces',
     args: [address || '0x'],
@@ -82,10 +82,10 @@ const StakePage: NextPage = () => {
     reset,
   } = useSignTypedData({
     domain: {
-      verifyingContract: STEAK_TOKEN_ADDRESS,
+      verifyingContract: STAKE_TOKEN_ADDRESS,
       version: '1',
       chainId: DEFAULT_CHAIN_ID,
-      name: 'SteakToken',
+      name: 'StakeToken',
     },
     types: {
       Permit: [
@@ -98,7 +98,7 @@ const StakePage: NextPage = () => {
     },
     value: {
       owner: address as `0x${string}`,
-      spender: STAKING_REWARDS_ADDRESS,
+      spender: ERC20_STAKING_POOL_PERPETUAL_ADDRESS,
       value: parseUnits(amount || '1'),
       nonce: nonces?.data || ethers.constants.One,
       deadline: deadline.current,
@@ -111,11 +111,11 @@ const StakePage: NextPage = () => {
   }, [signature])
 
   const selfPermitConfig = usePrepareContractWrite({
-    address: STAKING_REWARDS_ADDRESS,
+    address: ERC20_STAKING_POOL_PERPETUAL_ADDRESS,
     abi: ERC20_STAKING_POOL_ABI,
     functionName: 'selfPermit',
     args: [
-      STEAK_TOKEN_ADDRESS,
+      STAKE_TOKEN_ADDRESS,
       parseUnits(amount || '0'),
       deadline.current,
       permit?.v as number,
@@ -127,7 +127,7 @@ const StakePage: NextPage = () => {
   const stakeCalldata = useStakeCalldata(amount)
 
   const multicallConfig = usePrepareContractWrite({
-    address: STAKING_REWARDS_ADDRESS,
+    address: ERC20_STAKING_POOL_PERPETUAL_ADDRESS,
     abi: ERC20_STAKING_POOL_ABI,
     functionName: 'multicall',
     args: [
@@ -140,14 +140,14 @@ const StakePage: NextPage = () => {
   })
 
   const exitConfig = usePrepareContractWrite({
-    address: STAKING_REWARDS_ADDRESS,
+    address: ERC20_STAKING_POOL_PERPETUAL_ADDRESS,
     abi: ERC20_STAKING_POOL_ABI,
     functionName: 'exit',
     enabled: stakingData?.balanceOf?.gt(0),
   })
 
   const withdrawConfig = usePrepareContractWrite({
-    address: STAKING_REWARDS_ADDRESS,
+    address: ERC20_STAKING_POOL_PERPETUAL_ADDRESS,
     abi: ERC20_STAKING_POOL_ABI,
     functionName: 'withdraw',
     args: [parseUnits(amount || '0')],
@@ -155,7 +155,7 @@ const StakePage: NextPage = () => {
   })
 
   const getRewardConfig = usePrepareContractWrite({
-    address: STAKING_REWARDS_ADDRESS,
+    address: ERC20_STAKING_POOL_PERPETUAL_ADDRESS,
     abi: ERC20_STAKING_POOL_ABI,
     functionName: 'getReward',
   })

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Unlicense
-pragma solidity ^0.8.4;
+pragma solidity ^0.8.17;
 
 import {BaseTest, console} from "./base/BaseTest.sol";
 
@@ -7,6 +7,7 @@ import {xERC20} from "../xERC20.sol";
 import {TestERC20} from "./mocks/TestERC20.sol";
 import {TestERC721} from "./mocks/TestERC721.sol";
 import {ERC20StakingPool} from "../ERC20StakingPool.sol";
+import {ERC20StakingPoolPerpetual} from "../ERC20StakingPoolPerpetual.sol";
 import {ERC721StakingPool} from "../ERC721StakingPool.sol";
 import {StakingPoolFactory} from "../StakingPoolFactory.sol";
 
@@ -19,13 +20,14 @@ contract StakingPoolFactoryTest is BaseTest {
     function setUp() public {
         xERC20 xERC20Implementation = new xERC20();
         ERC20StakingPool erc20StakingPoolImplementation = new ERC20StakingPool();
+        ERC20StakingPoolPerpetual erc20StakingPoolPerpetualImplementation = new ERC20StakingPoolPerpetual();
         ERC721StakingPool erc721StakingPoolImplementation = new ERC721StakingPool();
         factory = new StakingPoolFactory(
             xERC20Implementation,
             erc20StakingPoolImplementation,
+            erc20StakingPoolPerpetualImplementation,
             erc721StakingPoolImplementation
         );
-
         rewardToken = new TestERC20();
         stakeToken = new TestERC20();
         stakeNFT = new TestERC721();

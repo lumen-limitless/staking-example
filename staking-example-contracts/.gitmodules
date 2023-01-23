@@ -2,10 +2,6 @@
 	path = lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
 	branch = v1.2.0
-[submodule "lib/openzeppelin-contracts"]
-	path = lib/openzeppelin-contracts
-	url = https://github.com/Openzeppelin/openzeppelin-contracts
-	branch = v4.8.1
 [submodule "lib/create3-factory"]
 	path = lib/create3-factory
 	url = https://github.com/ZeframLou/create3-factory
@@ -14,4 +10,4 @@
 	url = https://github.com/transmissions11/solmate
 [submodule "lib/playpen"]
 	path = lib/playpen
-	url = https://github.com/zeframlou/playpen
+	url = https://github.com/lumen-limitless/playpen

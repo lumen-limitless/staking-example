@@ -17,9 +17,9 @@ contract DeployERC20StakingPool is CREATE3Script {
         StakingPoolFactory factory =
             StakingPoolFactory(create3.getDeployed(deployer, getCreate3ContractSalt("StakingPoolFactory")));
 
-        ERC20 stakeToken = ERC20(create3.getDeployed(deployer, getCreate3ContractSalt("SteakToken")));
+        ERC20 stakeToken = ERC20(create3.getDeployed(deployer, getCreate3ContractSalt("StakeToken")));
 
-        ERC20 rewardToken = ERC20(create3.getDeployed(deployer, getCreate3ContractSalt("CookedSteakToken")));
+        ERC20 rewardToken = ERC20(create3.getDeployed(deployer, getCreate3ContractSalt("RewardToken")));
 
         vm.startBroadcast(deployerPrivateKey);
 

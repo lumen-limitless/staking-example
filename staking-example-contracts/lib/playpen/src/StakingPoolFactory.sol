@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0
-pragma solidity ^0.8.11;
+pragma solidity ^0.8.17;
 
 import {ClonesWithImmutableArgs} from "@clones/ClonesWithImmutableArgs.sol";
 
@@ -8,6 +8,7 @@ import {ERC721} from "solmate/tokens/ERC721.sol";
 
 import {xERC20} from "./xERC20.sol";
 import {ERC20StakingPool} from "./ERC20StakingPool.sol";
+import {ERC20StakingPoolPerpetual} from "./ERC20StakingPoolPerpetual.sol";
 import {ERC721StakingPool} from "./ERC721StakingPool.sol";
 
 /// @title StakingPoolFactory
@@ -26,6 +27,7 @@ contract StakingPoolFactory {
 
     event CreateXERC20(xERC20 stakingPool);
     event CreateERC20StakingPool(ERC20StakingPool stakingPool);
+    event CreateERC20StakingPoolPerpetual(ERC20StakingPoolPerpetual stakingPool);
     event CreateERC721StakingPool(ERC721StakingPool stakingPool);
 
     /// -----------------------------------------------------------------------
@@ -38,16 +40,21 @@ contract StakingPoolFactory {
     /// @notice The contract used as the template for all ERC20StakingPool contracts created
     ERC20StakingPool public immutable erc20StakingPoolImplementation;
 
+    /// @notice The contract used as the template for all ERC20StakingPoolPerpetual contracts created
+    ERC20StakingPoolPerpetual public immutable erc20StakingPoolPerpetualImplementation;
+
     /// @notice The contract used as the template for all ERC721StakingPool contracts created
     ERC721StakingPool public immutable erc721StakingPoolImplementation;
 
     constructor(
         xERC20 xERC20Implementation_,
         ERC20StakingPool erc20StakingPoolImplementation_,
+        ERC20StakingPoolPerpetual erc20StakingPoolPerpetualImplementation_,
         ERC721StakingPool erc721StakingPoolImplementation_
     ) {
         xERC20Implementation = xERC20Implementation_;
         erc20StakingPoolImplementation = erc20StakingPoolImplementation_;
+        erc20StakingPoolPerpetualImplementation = erc20StakingPoolPerpetualImplementation_;
         erc721StakingPoolImplementation = erc721StakingPoolImplementation_;
     }
 
@@ -60,20 +67,11 @@ contract StakingPoolFactory {
     /// @param stakeToken The token being staked in the pool
     /// @param DURATION The length of each reward period, in seconds
     /// @return stakingPool The created xERC20 contract
-    function createXERC20(
-        bytes32 name,
-        bytes32 symbol,
-        uint8 decimals,
-        ERC20 stakeToken,
-        uint64 DURATION
-    ) external returns (xERC20 stakingPool) {
-        bytes memory data = abi.encodePacked(
-            name,
-            symbol,
-            decimals,
-            stakeToken,
-            DURATION
-        );
+    function createXERC20(bytes32 name, bytes32 symbol, uint8 decimals, ERC20 stakeToken, uint64 DURATION)
+        external
+        returns (xERC20 stakingPool)
+    {
+        bytes memory data = abi.encodePacked(name, symbol, decimals, stakeToken, DURATION);
 
         stakingPool = xERC20(address(xERC20Implementation).clone(data));
         stakingPool.initialize(msg.sender);
@@ -88,19 +86,34 @@ contract StakingPoolFactory {
     /// @param stakeToken The token being staked in the pool
     /// @param DURATION The length of each reward period, in seconds
     /// @return stakingPool The created ERC20StakingPool contract
-    function createERC20StakingPool(
-        ERC20 rewardToken,
-        ERC20 stakeToken,
-        uint64 DURATION
-    ) external returns (ERC20StakingPool stakingPool) {
+    function createERC20StakingPool(ERC20 rewardToken, ERC20 stakeToken, uint64 DURATION)
+        external
+        returns (ERC20StakingPool stakingPool)
+    {
         bytes memory data = abi.encodePacked(rewardToken, stakeToken, DURATION);
 
-        stakingPool = ERC20StakingPool(
-            address(erc20StakingPoolImplementation).clone(data)
-        );
+        stakingPool = ERC20StakingPool(address(erc20StakingPoolImplementation).clone(data));
         stakingPool.initialize(msg.sender);
 
         emit CreateERC20StakingPool(stakingPool);
+    }
+
+    /// @notice Creates an ERC20StakingPoolPerpetual contract
+    /// @dev Uses a modified minimal proxy contract that stores immutable parameters in code and
+    /// passes them in through calldata. See ClonesWithImmutableArgs.
+    /// @param rewardToken The token being rewarded to stakers
+    /// @param stakeToken The token being staked in the pool
+    /// @return stakingPool The created ERC20StakingPool contract
+    function createERC20StakingPoolPerpetual(ERC20 rewardToken, ERC20 stakeToken)
+        external
+        returns (ERC20StakingPoolPerpetual stakingPool)
+    {
+        bytes memory data = abi.encodePacked(rewardToken, stakeToken);
+
+        stakingPool = ERC20StakingPoolPerpetual(address(erc20StakingPoolPerpetualImplementation).clone(data));
+        stakingPool.initialize(msg.sender);
+
+        emit CreateERC20StakingPoolPerpetual(stakingPool);
     }
 
     /// @notice Creates an ERC721StakingPool contract
@@ -110,16 +123,13 @@ contract StakingPoolFactory {
     /// @param stakeToken The token being staked in the pool
     /// @param DURATION The length of each reward period, in seconds
     /// @return stakingPool The created ERC721StakingPool contract
-    function createERC721StakingPool(
-        ERC20 rewardToken,
-        ERC721 stakeToken,
-        uint64 DURATION
-    ) external returns (ERC721StakingPool stakingPool) {
+    function createERC721StakingPool(ERC20 rewardToken, ERC721 stakeToken, uint64 DURATION)
+        external
+        returns (ERC721StakingPool stakingPool)
+    {
         bytes memory data = abi.encodePacked(rewardToken, stakeToken, DURATION);
 
-        stakingPool = ERC721StakingPool(
-            address(erc721StakingPoolImplementation).clone(data)
-        );
+        stakingPool = ERC721StakingPool(address(erc721StakingPoolImplementation).clone(data));
         stakingPool.initialize(msg.sender);
 
         emit CreateERC721StakingPool(stakingPool);

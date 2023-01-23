@@ -1,8 +1,8 @@
 import { useBoolean } from 'react-use'
 import { useEffect, useState } from 'react'
 import { ethers } from 'ethers'
-import { STAKING_REWARDS_ADDRESS } from '../constants'
-import ERC20_STAKING_POOL_ABI from '../constants/ERC20StakingPool.abi'
+import { ERC20_STAKING_POOL_PERPETUAL_ADDRESS } from '../constants'
+import ERC20_STAKING_POOL_PERPETUAL_ABI from '../constants/ERC20StakingPoolPerpetual.abi'
 import { parseUnits } from 'ethers/lib/utils.js'
 
 const useStakeCalldata = (amount: string) => {
@@ -12,8 +12,8 @@ const useStakeCalldata = (amount: string) => {
   useEffect(() => {
     const get = async () => {
       const contract = new ethers.Contract(
-        STAKING_REWARDS_ADDRESS,
-        ERC20_STAKING_POOL_ABI
+        ERC20_STAKING_POOL_PERPETUAL_ADDRESS,
+        ERC20_STAKING_POOL_PERPETUAL_ABI
       )
 
       const unsignedTx = await contract.populateTransaction.stake(
