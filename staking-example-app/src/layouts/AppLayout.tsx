@@ -22,6 +22,7 @@ export default function AppLayout({ children }: { children?: any }) {
       <a href="#main" aria-label="skip" className="sr-only">
         skip to content
       </a>
+
       <ModalUI />
       <Banner>
         <svg
