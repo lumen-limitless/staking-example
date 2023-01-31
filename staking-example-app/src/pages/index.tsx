@@ -13,11 +13,7 @@ import Toggle from '../components/ui/Toggle'
 import { useBoolean } from 'react-use'
 import { useStakingCalls } from '../hooks'
 import Spinner from '../components/ui/Spinner'
-import {
-  DEFAULT_CHAIN_ID,
-  ERC20_STAKING_POOL_PERPETUAL_ADDRESS,
-  STAKE_TOKEN_ADDRESS,
-} from '../constants'
+import { DEFAULT_CHAIN_ID } from '../constants'
 import { NextSeo } from 'next-seo'
 import Faucet from '../components/faucet'
 import { commify, parseUnits } from 'ethers/lib/utils'
@@ -28,9 +24,20 @@ import {
   usePrepareContractWrite,
   useSignTypedData,
 } from 'wagmi'
-import STEAK_TOKEN_ABI from '../constants/StakeToken.abi'
-import ERC20_STAKING_POOL_ABI from '../constants/ERC20StakingPoolPerpetual.abi'
+
 import useStakeCalldata from '../hooks/useStakeCalldata'
+import {
+  erc20StakingPoolPerpetualAddress,
+  stakeTokenAddress,
+  useErc20StakingPoolPerpetualRead,
+  usePrepareErc20StakingPoolPerpetualExit,
+  usePrepareErc20StakingPoolPerpetualGetReward,
+  usePrepareErc20StakingPoolPerpetualMulticall,
+  usePrepareErc20StakingPoolPerpetualSelfPermitIfNecessary,
+  usePrepareErc20StakingPoolPerpetualWithdraw,
+  useStakeTokenBalanceOf,
+  useStakeTokenNonces,
+} from '../generated'
 
 const StakePage: NextPage = () => {
   const [amount, setAmount] = useState<string>('')
@@ -38,19 +45,14 @@ const StakePage: NextPage = () => {
 
   const { address, isConnected, isDisconnected } = useAccount()
 
-  const tokenBalance = useBalance({
-    address: address,
-    token: STAKE_TOKEN_ADDRESS,
+  const tokenBalance = useStakeTokenBalanceOf({
     watch: true,
+    args: [address as `0x${string}`],
   })
 
-  const nonces = useContractRead({
-    address: STAKE_TOKEN_ADDRESS,
-    abi: STEAK_TOKEN_ABI,
-    functionName: 'nonces',
-    args: [address || '0x'],
+  const nonces = useStakeTokenNonces({
     watch: true,
-    enabled: Boolean(address),
+    args: [address as `0x`],
   })
 
   const stakingData = useStakingCalls()
@@ -82,7 +84,7 @@ const StakePage: NextPage = () => {
     reset,
   } = useSignTypedData({
     domain: {
-      verifyingContract: STAKE_TOKEN_ADDRESS,
+      verifyingContract: stakeTokenAddress[5],
       version: '1',
       chainId: DEFAULT_CHAIN_ID,
       name: 'StakeToken',
@@ -98,7 +100,7 @@ const StakePage: NextPage = () => {
     },
     value: {
       owner: address as `0x${string}`,
-      spender: ERC20_STAKING_POOL_PERPETUAL_ADDRESS,
+      spender: erc20StakingPoolPerpetualAddress[5],
       value: parseUnits(amount || '1'),
       nonce: nonces?.data || ethers.constants.One,
       deadline: deadline.current,
@@ -110,26 +112,22 @@ const StakePage: NextPage = () => {
     return ethers.utils.splitSignature(signature)
   }, [signature])
 
-  const selfPermitConfig = usePrepareContractWrite({
-    address: ERC20_STAKING_POOL_PERPETUAL_ADDRESS,
-    abi: ERC20_STAKING_POOL_ABI,
-    functionName: 'selfPermit',
-    args: [
-      STAKE_TOKEN_ADDRESS,
-      parseUnits(amount || '0'),
-      deadline.current,
-      permit?.v as number,
-      permit?.r as `0x${string}`,
-      permit?.s as `0x${string}`,
-    ],
-    enabled: Boolean(amount !== ''),
-  })
+  const selfPermitConfig =
+    usePrepareErc20StakingPoolPerpetualSelfPermitIfNecessary({
+      args: [
+        stakeTokenAddress[5],
+        parseUnits(amount || '0'),
+        deadline.current,
+        permit?.v as number,
+        permit?.r as `0x${string}`,
+        permit?.s as `0x${string}`,
+      ],
+      enabled: Boolean(amount !== ''),
+    })
+
   const stakeCalldata = useStakeCalldata(amount)
 
-  const multicallConfig = usePrepareContractWrite({
-    address: ERC20_STAKING_POOL_PERPETUAL_ADDRESS,
-    abi: ERC20_STAKING_POOL_ABI,
-    functionName: 'multicall',
+  const multicallConfig = usePrepareErc20StakingPoolPerpetualMulticall({
     args: [
       [
         selfPermitConfig?.data?.request.data as `0x${string}`,
@@ -139,26 +137,16 @@ const StakePage: NextPage = () => {
     enabled: Boolean(selfPermitConfig?.data && stakeCalldata),
   })
 
-  const exitConfig = usePrepareContractWrite({
-    address: ERC20_STAKING_POOL_PERPETUAL_ADDRESS,
-    abi: ERC20_STAKING_POOL_ABI,
-    functionName: 'exit',
+  const exitConfig = usePrepareErc20StakingPoolPerpetualExit({
     enabled: stakingData?.balanceOf?.gt(0),
   })
 
-  const withdrawConfig = usePrepareContractWrite({
-    address: ERC20_STAKING_POOL_PERPETUAL_ADDRESS,
-    abi: ERC20_STAKING_POOL_ABI,
-    functionName: 'withdraw',
+  const withdrawConfig = usePrepareErc20StakingPoolPerpetualWithdraw({
     args: [parseUnits(amount || '0')],
     enabled: Boolean(amount !== '') && isWithdrawing,
   })
 
-  const getRewardConfig = usePrepareContractWrite({
-    address: ERC20_STAKING_POOL_PERPETUAL_ADDRESS,
-    abi: ERC20_STAKING_POOL_ABI,
-    functionName: 'getReward',
-  })
+  const getRewardConfig = usePrepareErc20StakingPoolPerpetualGetReward()
 
   return (
     <>
@@ -258,7 +246,8 @@ const StakePage: NextPage = () => {
                           max={
                             isWithdrawing
                               ? formatBalance(stakingData.balanceOf) || '0'
-                              : tokenBalance.data?.formatted || '0'
+                              : formatBalance(tokenBalance.data as BigNumber) ||
+                                '0'
                           }
                         />
                         <button
@@ -267,7 +256,9 @@ const StakePage: NextPage = () => {
                             setAmount(
                               isWithdrawing
                                 ? formatBalance(stakingData.balanceOf) || '0'
-                                : tokenBalance.data?.formatted || '0'
+                                : formatBalance(
+                                    tokenBalance.data as BigNumber
+                                  ) || '0'
                             )
                           }}
                         >
@@ -312,7 +303,10 @@ const StakePage: NextPage = () => {
                     </div>
                     <ul className="my-6 max-w-sm space-y-2 rounded p-3 ">
                       <li className="flex">
-                        Balance: {commify(tokenBalance?.data?.formatted || '0')}
+                        Balance:{' '}
+                        {commify(
+                          formatBalance(tokenBalance?.data as BigNumber) || '0'
+                        )}
                       </li>
 
                       <li className="flex ">

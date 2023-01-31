@@ -1,11 +1,11 @@
-import {
-  ERC20_STAKING_POOL_PERPETUAL_ADDRESS,
-  STAKE_TOKEN_ADDRESS,
-} from './../constants/index'
 import { ethers } from 'ethers'
 import { useAccount, useContractReads, useNetwork } from 'wagmi'
-import ERC20_STAKING_POOL_ABI from '../constants/ERC20StakingPoolPerpetual.abi'
-import STEAK_TOKEN_ABI from '../constants/StakeToken.abi'
+import {
+  erc20StakingPoolPerpetualABI,
+  erc20StakingPoolPerpetualAddress,
+  stakeTokenABI,
+  stakeTokenAddress,
+} from '../generated'
 
 export const useStakingCalls = () => {
   const { address } = useAccount()
@@ -14,31 +14,31 @@ export const useStakingCalls = () => {
     watch: true,
     contracts: [
       {
-        address: ERC20_STAKING_POOL_PERPETUAL_ADDRESS,
-        abi: ERC20_STAKING_POOL_ABI,
+        address: erc20StakingPoolPerpetualAddress[5],
+        abi: erc20StakingPoolPerpetualABI,
         functionName: 'balanceOf',
         args: [address || ethers.constants.AddressZero],
       },
       {
-        address: ERC20_STAKING_POOL_PERPETUAL_ADDRESS,
-        abi: ERC20_STAKING_POOL_ABI,
+        address: erc20StakingPoolPerpetualAddress[5],
+        abi: erc20StakingPoolPerpetualABI,
         functionName: 'totalSupply',
       },
 
       {
-        address: STAKE_TOKEN_ADDRESS,
-        abi: STEAK_TOKEN_ABI,
+        address: stakeTokenAddress[5],
+        abi: stakeTokenABI,
         functionName: 'lastFaucetMint',
         args: [address || ethers.constants.AddressZero],
       },
       {
-        address: ERC20_STAKING_POOL_PERPETUAL_ADDRESS,
-        abi: ERC20_STAKING_POOL_ABI,
+        address: erc20StakingPoolPerpetualAddress[5],
+        abi: erc20StakingPoolPerpetualABI,
         functionName: 'rewardRate',
       },
       {
-        address: ERC20_STAKING_POOL_PERPETUAL_ADDRESS,
-        abi: ERC20_STAKING_POOL_ABI,
+        address: erc20StakingPoolPerpetualAddress[5],
+        abi: erc20StakingPoolPerpetualABI,
         functionName: 'earned',
         args: [address || ethers.constants.AddressZero],
       },

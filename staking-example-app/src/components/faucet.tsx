@@ -1,8 +1,7 @@
 import { BigNumber } from 'ethers'
-import { useNetwork, usePrepareContractWrite } from 'wagmi'
+import { usePrepareContractWrite } from 'wagmi'
+import { stakeTokenABI, stakeTokenAddress } from '../generated'
 import TransactionButton from './WagmiTransactionButton'
-import { STAKE_TOKEN_ADDRESS } from '../constants'
-import STEAK_TOKEN_ABI from '../constants/StakeToken.abi'
 
 export default function Faucet({
   lastFaucetMint,
@@ -10,8 +9,8 @@ export default function Faucet({
   lastFaucetMint: BigNumber
 }) {
   const faucetMintConfig = usePrepareContractWrite({
-    address: STAKE_TOKEN_ADDRESS,
-    abi: STEAK_TOKEN_ABI,
+    address: stakeTokenAddress[5],
+    abi: stakeTokenABI,
     functionName: 'faucetMint',
   })
 
