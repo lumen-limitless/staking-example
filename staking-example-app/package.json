@@ -6,7 +6,6 @@
   "license": "MIT",
   "scripts": {
     "dev": "next dev",
-    "predev": "wagmi generate",
     "analyze": "ANALYZE=true next build",
     "build": "next build",
     "postbuild": "next-sitemap",
